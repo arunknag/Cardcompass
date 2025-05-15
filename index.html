@@ -6,25 +6,18 @@
     <title>CardCompass - Reward Points Advisor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles if needed */
         body {
             font-family: 'Inter', sans-serif;
         }
         .highlight-card {
-            /* Updated to violet for violet theme */
             border: 2px solid #7C3AED; /* Tailwind violet-600 */
-            box-shadow: 0 0 15px rgba(124, 58, 237, 0.3); /* Tailwind violet-600 with opacity */
+            box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
         }
-        /* Basic styling for the modal */
         .modal {
             transition: opacity 0.25s ease;
         }
-        .modal-active {
-            display: flex;
-        }
-        .modal-inactive {
-            display: none;
-        }
+        .modal-active { display: flex; }
+        .modal-inactive { display: none; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,7 +36,13 @@
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl max-w-3xl mx-auto">
             <div class="mb-8 space-y-6">
                 <div>
-                    <label for="pointsBalance" class="block text-sm font-medium text-gray-700 mb-1">Your Current Reward Points:</label>
+                    <label for="hdfcCard" class="block text-sm font-medium text-gray-700 mb-1">Select Your HDFC Credit Card:</label>
+                    <select id="hdfcCard" name="hdfcCard" class="mt-1 block w-full px-4 py-3 pr-10 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-violet-500 focus:border-violet-500 sm:text-sm">
+                        </select>
+                </div>
+
+                <div>
+                    <label for="pointsBalance" class="block text-sm font-medium text-gray-700 mb-1">Your Current Reward Points (for selected card):</label>
                     <input type="number" id="pointsBalance" name="pointsBalance" placeholder="e.g., 50000" class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-violet-500 focus:border-violet-500 sm:text-sm">
                 </div>
 
@@ -90,108 +89,87 @@
         </div>
     </div>
 
-
     <script>
-        // --- DATA STORE (Manually Curated for MVP) ---
-        const redemptionOptions = [
+        // --- DATA STORE (Manually Curated for MVP - Expanded for multiple cards) ---
+        const hdfcCards = [
+            "HDFC Regalia Gold",
+            "HDFC Millennia",
+            "HDFC Diners Club Black",
+            "HDFC Tata Neu Infinity",
+            "HDFC MoneyBack+"
+        ];
+
+        // Structure: Each item is a generic reward.
+        // 'cardSpecificDetails' holds how each card can redeem this generic reward.
+        const masterRedemptionOptions = [
             {
-                id: 2,
-                category: "Flights",
-                name: "Flight Booking via SmartBuy (Other Airlines)",
-                description: "Book various airline flights through HDFC SmartBuy portal.",
-                pointsRequired: 10000,
-                monetaryValueINR: 7000,
-                link: "https://offers.smartbuy.hdfcbank.com/diners/", 
-                type: "Direct",
-                notes: "Value can be ~Re 0.70 per point or vary. Check SmartBuy for current offers on operational airlines.",
-                isPromotion: false,
-            },
-            {
-                id: 3,
-                category: "Hotels",
-                name: "Hotel Booking via SmartBuy",
-                description: "Book hotels through HDFC SmartBuy portal.",
-                pointsRequired: 15000,
-                monetaryValueINR: 10000,
-                link: "https://offers.smartbuy.hdfcbank.com/diners/", 
-                type: "Direct",
-                notes: "Value can be ~Re 0.67 per point. Rates vary. Check SmartBuy for current hotel offers.",
-                isPromotion: false,
-            },
-            {
-                id: 4,
+                rewardId: "amazon-500", // Unique ID for the generic reward
                 category: "Shopping Vouchers",
-                name: "Amazon Voucher (via SmartBuy/Rewards Catalog)",
-                description: "Redeem points for Amazon Pay Gift Card.",
-                pointsRequired: 5000,
-                monetaryValueINR: 2500,
-                link: "https://offers.smartbuy.hdfcbank.com/diners/", 
-                type: "Voucher",
-                notes: "Typically Re 0.50 per point. Check current denominations and point requirements.",
-                isPromotion: false,
+                genericName: "Amazon Voucher ₹500",
+                baseMonetaryValueINR: 500,
+                genericLink: "https://offers.smartbuy.hdfcbank.com/",
+                cardSpecificDetails: [
+                    { cardName: "HDFC Regalia Gold", pointsRequired: 1650, notes: "Approx. Re 0.30/point. Check SmartBuy.", isPromotion: false },
+                    { cardName: "HDFC Millennia", pointsRequired: 1000, notes: "Cashback equivalent. Approx Re 0.50/point if treated as 5% cashback on voucher platform.", isPromotion: true },
+                    { cardName: "HDFC Diners Club Black", pointsRequired: 1000, notes: "Approx. Re 0.50/point on SmartBuy. Check offers.", isPromotion: false },
+                    { cardName: "HDFC Tata Neu Infinity", pointsRequired: 500 / 0.7 * 1, notes: "Value in NeuCoins, 1 NeuCoin = Re 1. Assumed 70% value on some vouchers if not Tata brand.", isPromotion: false }, // Example: 715 NeuCoins
+                    { cardName: "HDFC MoneyBack+", pointsRequired: 2500, notes: "Approx. Re 0.20/point. Check catalog.", isPromotion: false }
+                ]
             },
             {
-                id: 5,
+                rewardId: "flipkart-1000",
                 category: "Shopping Vouchers",
-                name: "Flipkart Voucher (via SmartBuy/Rewards Catalog)",
-                description: "Redeem points for Flipkart Gift Card.",
-                pointsRequired: 5000,
-                monetaryValueINR: 2000,
-                link: "https://offers.smartbuy.hdfcbank.com/diners/", 
-                type: "Voucher",
-                notes: "Typically Re 0.40 per point. Check current denominations.",
-                isPromotion: false,
+                genericName: "Flipkart Voucher ₹1000",
+                baseMonetaryValueINR: 1000,
+                genericLink: "https://offers.smartbuy.hdfcbank.com/",
+                cardSpecificDetails: [
+                    { cardName: "HDFC Regalia Gold", pointsRequired: 3300, notes: "Approx. Re 0.30/point.", isPromotion: false },
+                    { cardName: "HDFC Millennia", pointsRequired: 2000, notes: "Cashback equivalent. Approx Re 0.50/point.", isPromotion: true },
+                    { cardName: "HDFC Diners Club Black", pointsRequired: 2000, notes: "Approx. Re 0.50/point on SmartBuy.", isPromotion: false },
+                ]
             },
             {
-                id: 6,
+                rewardId: "statement-credit",
                 category: "Cashback",
-                name: "Statement Credit",
-                description: "Convert points to statement credit.",
-                pointsRequired: 10000,
-                monetaryValueINR: 2000,
-                link: "Accessible via HDFC NetBanking or customer care.", 
-                type: "Cashback",
-                notes: "Usually the lowest redemption value (e.g., Re 0.20 per point).",
-                isPromotion: false,
+                genericName: "Statement Credit",
+                baseMonetaryValueINR: 1, // Per point value will be calculated
+                genericLink: "HDFC NetBanking",
+                cardSpecificDetails: [
+                    { cardName: "HDFC Regalia Gold", pointsRequired: 1 / 0.20, monetaryValuePerPoint: 0.20, notes: "Re 0.20 per point.", isPromotion: false }, // Points for Re 1 credit
+                    { cardName: "HDFC Millennia", pointsRequired: 1 / 0.25, monetaryValuePerPoint: 0.25, notes: "Re 0.25 per point. Max limits apply.", isPromotion: false },
+                    { cardName: "HDFC Diners Club Black", pointsRequired: 1 / 0.20, monetaryValuePerPoint: 0.20, notes: "Re 0.20 per point.", isPromotion: false },
+                    { cardName: "HDFC Tata Neu Infinity", pointsRequired: 1 / 0.20, monetaryValuePerPoint: 0.20, notes: "Statement credit for NeuCoins may differ. Assuming generic cashback value.", isPromotion: false },
+                    { cardName: "HDFC MoneyBack+", pointsRequired: 1 / 0.20, monetaryValuePerPoint: 0.20, notes: "Re 0.20 per point.", isPromotion: false }
+                ]
             },
             {
-                id: 8,
-                category: "Shopping Vouchers",
-                name: "Tanishq Voucher (via SmartBuy/Rewards Catalog)",
-                description: "Redeem points for Tanishq Gold/Diamond jewellery voucher.",
-                pointsRequired: 10000,
-                monetaryValueINR: 7000,
-                link: "https://offers.smartbuy.hdfcbank.com/diners/", 
-                type: "Voucher",
-                notes: "Often good value (Re 0.70 per point). Check current denominations.",
-                isPromotion: true, 
+                rewardId: "flights-smartbuy-generic",
+                category: "Flights",
+                genericName: "Flight Booking (SmartBuy General)",
+                baseMonetaryValueINR: 5000, // Example flight cost
+                genericLink: "https://offers.smartbuy.hdfcbank.com/diners/",
+                cardSpecificDetails: [
+                    { cardName: "HDFC Regalia Gold", pointsRequired: 5000 / 0.50, notes: "Up to Re 0.50/point on SmartBuy. Varies.", isPromotion: false },
+                    { cardName: "HDFC Millennia", pointsRequired: 5000 / 0.30, notes: "Typically lower flight value. Check SmartBuy.", isPromotion: false },
+                    { cardName: "HDFC Diners Club Black", pointsRequired: 5000 / 0.70, notes: "Can be up to Re 0.70-1/point on SmartBuy for select airlines. Varies.", isPromotion: true },
+                    { cardName: "HDFC Tata Neu Infinity", pointsRequired: 5000 / 0.70, notes: "Value in NeuCoins for Tata brand flights (Air India). Check NeuPass.", isPromotion: false }
+                ]
             },
-            {
-                id: 9,
+             {
+                rewardId: "hotels-smartbuy-generic",
                 category: "Hotels",
-                name: "Transfer to Accor Live Limitless (ALL) Points",
-                description: "Transfer Diners Club Black points to Accor ALL.",
-                pointsRequired: 2000,
-                monetaryValueINR: 1800,
-                transferRatio: "2 DC Points = 1 ALL Point",
-                partnerPointValueINR_Note: "1 ALL Point valued at ~Re 1.80 (2000 ALL pts = 40 EUR value)",
-                link: "HDFC NetBanking or specific portal for points transfer.", 
-                type: "Transfer",
-                notes: "Min. transfer may apply. Accor points have fixed value for hotel stays.",
-                isPromotion: false,
+                genericName: "Hotel Booking (SmartBuy General)",
+                baseMonetaryValueINR: 6000, // Example hotel cost
+                genericLink: "https://offers.smartbuy.hdfcbank.com/diners/",
+                cardSpecificDetails: [
+                    { cardName: "HDFC Regalia Gold", pointsRequired: 6000 / 0.50, notes: "Up to Re 0.50/point on SmartBuy. Varies.", isPromotion: false },
+                    { cardName: "HDFC Diners Club Black", pointsRequired: 6000 / 0.70, notes: "Can be up to Re 0.70-1/point on SmartBuy. Varies.", isPromotion: true },
+                ]
             }
         ];
 
-        // Pre-calculate redemption rates
-        redemptionOptions.forEach(option => {
-            if (option.pointsRequired > 0) {
-                option.redemptionRate = parseFloat((option.monetaryValueINR / option.pointsRequired).toFixed(3));
-            } else {
-                option.redemptionRate = 0;
-            }
-        });
-
         // --- DOM Elements ---
+        const hdfcCardEl = document.getElementById('hdfcCard');
         const pointsBalanceEl = document.getElementById('pointsBalance');
         const redemptionCategoryEl = document.getElementById('redemptionCategory');
         const findButton = document.getElementById('findRecommendations');
@@ -206,47 +184,61 @@
         const modalMessageEl = document.getElementById('modalMessage');
         const closeModalButtonEl = document.getElementById('closeModalButton');
 
-
         // --- APP LOGIC ---
-        function populateCategories() {
-            const categories = [...new Set(redemptionOptions.map(option => option.category))];
-            categories.sort();
+        function populateCardSelector() {
+            hdfcCardEl.innerHTML = '<option value="">-- Select Your Card --</option>';
+            hdfcCards.forEach(card => {
+                const optionEl = document.createElement('option');
+                optionEl.value = card;
+                optionEl.textContent = card;
+                hdfcCardEl.appendChild(optionEl);
+            });
+        }
+
+        function populateCategoriesForSelectedCard() {
+            const selectedCard = hdfcCardEl.value;
+            const categories = new Set();
+            if (selectedCard) {
+                masterRedemptionOptions.forEach(option => {
+                    const cardDetail = option.cardSpecificDetails.find(detail => detail.cardName === selectedCard);
+                    if (cardDetail) {
+                        categories.add(option.category);
+                    }
+                });
+            }
+            
             redemptionCategoryEl.innerHTML = '<option value="">-- Select a Category --</option>';
-            categories.forEach(category => {
+            const sortedCategories = Array.from(categories).sort();
+            sortedCategories.forEach(category => {
                 const optionEl = document.createElement('option');
                 optionEl.value = category;
                 optionEl.textContent = category;
                 redemptionCategoryEl.appendChild(optionEl);
             });
+             // Disable category dropdown if no card is selected
+            redemptionCategoryEl.disabled = !selectedCard;
         }
 
-        function displayRecommendations(recommendations) {
+
+        function displayRecommendations(recommendations, selectedCardName) {
             recommendationsListEl.innerHTML = '';
             noResultsMessageEl.classList.add('hidden');
 
             if (recommendations.length === 0) {
-                resultsTitleEl.textContent = 'No Suitable Recommendations Found';
-                noResultsMessageEl.textContent = 'Try adjusting your points balance or selecting a different category. Ensure your points cover the required amount for listed options, or the category may have limited options currently.';
+                resultsTitleEl.textContent = `No Suitable Recommendations for ${selectedCardName}`;
+                noResultsMessageEl.textContent = 'Try adjusting your points or category, or this card may have limited options for the selected category in our current data.';
                 noResultsMessageEl.classList.remove('hidden');
                 return;
             }
 
-            resultsTitleEl.textContent = 'Your Top Redemption Options';
+            resultsTitleEl.textContent = `Top Redemptions for ${selectedCardName}`;
 
             recommendations.forEach((rec, index) => {
                 const card = document.createElement('div');
                 card.className = `bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 ${index === 0 ? 'highlight-card' : ''}`;
-
-                let promotionBadge = '';
-                if (rec.isPromotion) {
-                    promotionBadge = `<span class="absolute top-0 right-0 mt-2 mr-2 bg-yellow-400 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">PROMOTION!</span>`;
-                }
                 
-                let bestValueBadge = '';
-                if (index === 0) {
-                    // Updated best value badge to violet theme
-                    bestValueBadge = `<span class="bg-violet-100 text-violet-700 text-xs font-bold px-3 py-1 rounded-full inline-block mb-2">BEST VALUE</span>`;
-                }
+                let promotionBadge = rec.isPromotion ? `<span class="absolute top-0 right-0 mt-2 mr-2 bg-yellow-400 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">PROMOTION!</span>` : '';
+                let bestValueBadge = index === 0 ? `<span class="bg-violet-100 text-violet-700 text-xs font-bold px-3 py-1 rounded-full inline-block mb-2">BEST VALUE</span>` : '';
 
                 card.innerHTML = `
                     <div class="relative">
@@ -254,15 +246,11 @@
                         <h3 class="text-lg sm:text-xl font-semibold text-violet-700 mb-2">${rec.name}</h3>
                         ${bestValueBadge}
                     </div>
-                    <p class="text-sm text-gray-600 mb-3">${rec.description}</p>
+                    <p class="text-sm text-gray-600 mb-3">Redeem for ${rec.genericName}</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm mb-4">
                         <p><strong>Points Required:</strong> <span class="font-mono">${rec.pointsRequired.toLocaleString()}</span></p>
                         <p><strong>Monetary Value:</strong> <span class="font-mono">₹${rec.monetaryValueINR.toLocaleString()}</span></p>
                         <p class="sm:col-span-2"><strong>Redemption Rate:</strong> <span class="font-bold text-violet-600 font-mono">₹${rec.redemptionRate.toFixed(2)} per point</span></p>
-                        ${rec.type === 'Transfer' ? `
-                            <p><strong>Transfer Ratio:</strong> ${rec.transferRatio}</p>
-                            <p><strong>Partner Value Note:</strong> ${rec.partnerPointValueINR_Note}</p>
-                        ` : ''}
                     </div>
                     ${rec.notes ? `<p class="text-xs text-gray-500 italic bg-gray-50 p-2 rounded-md mb-4">${rec.notes}</p>` : ''}
                     <a href="${rec.link}" target="_blank" rel="noopener noreferrer" class="inline-block bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out">
@@ -274,32 +262,66 @@
         }
 
         findButton.addEventListener('click', () => {
+            const selectedCardName = hdfcCardEl.value;
             const points = parseInt(pointsBalanceEl.value);
             const category = redemptionCategoryEl.value;
 
+            if (!selectedCardName) {
+                showModal('Card Missing', 'Please select your HDFC Credit Card.');
+                hdfcCardEl.focus();
+                return;
+            }
             if (isNaN(points) || points <= 0) {
                 showModal('Invalid Input', 'Please enter a valid number of points.');
                 pointsBalanceEl.focus();
                 return;
             }
             if (!category) {
-                showModal('Selection Missing', 'Please select a redemption category.');
+                showModal('Category Missing', 'Please select a redemption category.');
                 redemptionCategoryEl.focus();
                 return;
             }
 
-            const filteredOptions = redemptionOptions.filter(option => {
-                return option.category === category && points >= option.pointsRequired;
+            const applicableRecommendations = [];
+            masterRedemptionOptions.forEach(option => {
+                if (option.category === category) {
+                    const cardDetail = option.cardSpecificDetails.find(detail => detail.cardName === selectedCardName);
+                    if (cardDetail && points >= cardDetail.pointsRequired) {
+                        let monetaryValue = option.baseMonetaryValueINR;
+                        let redemptionRate;
+                        if (option.rewardId === "statement-credit" && cardDetail.monetaryValuePerPoint) {
+                             // For statement credit, the rate is fixed, and points required are for Re 1.
+                             // We want to show how many points for full value, or value of current points.
+                             // For simplicity, we'll show the rate, and assume user wants to redeem for some value.
+                             // The "monetaryValueINR" for display will be if they used all their points.
+                             monetaryValue = points * cardDetail.monetaryValuePerPoint;
+                             redemptionRate = cardDetail.monetaryValuePerPoint;
+                        } else {
+                            redemptionRate = monetaryValue / cardDetail.pointsRequired;
+                        }
+
+                        applicableRecommendations.push({
+                            name: option.genericName, // Use generic name, or could be cardDetail.name if it exists
+                            genericName: option.genericName, // For display reference
+                            pointsRequired: cardDetail.pointsRequired,
+                            monetaryValueINR: monetaryValue, // Use baseMonetaryValue from generic option
+                            redemptionRate: redemptionRate,
+                            notes: cardDetail.notes,
+                            link: option.genericLink, // Use generic link, or cardDetail.link
+                            isPromotion: cardDetail.isPromotion
+                        });
+                    }
+                }
             });
 
-            filteredOptions.sort((a, b) => {
+            applicableRecommendations.sort((a, b) => {
                 if (b.redemptionRate === a.redemptionRate) {
                     return a.pointsRequired - b.pointsRequired;
                 }
                 return b.redemptionRate - a.redemptionRate;
             });
 
-            displayRecommendations(filteredOptions);
+            displayRecommendations(applicableRecommendations, selectedCardName);
             const resultsElement = document.getElementById('resultsSection');
             if (resultsElement) {
                  resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -320,17 +342,19 @@
 
         closeModalButtonEl.addEventListener('click', closeModal);
         alertModalEl.addEventListener('click', (event) => {
-            if (event.target === alertModalEl) {
-                closeModal();
-            }
+            if (event.target === alertModalEl) { closeModal(); }
         });
 
+        // Event listener for card selection to update categories
+        hdfcCardEl.addEventListener('change', populateCategoriesForSelectedCard);
+
         function init() {
-            populateCategories();
+            populateCardSelector();
+            populateCategoriesForSelectedCard(); // Initial population (will be empty until card selected)
             currentYearEl.textContent = new Date().getFullYear();
             const today = new Date();
             const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            lastUpdatedDateEl.textContent = today.toLocaleDateString('en-US', options) + " (Violet Theme)";
+            lastUpdatedDateEl.textContent = today.toLocaleDateString('en-US', options) + " (Multi-card MVP)";
         }
 
         document.addEventListener('DOMContentLoaded', init);
